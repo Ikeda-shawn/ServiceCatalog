@@ -135,6 +135,27 @@ Resources:
         - Key: Purpose
           Value: Testing
 
+  # Complete Network Stack Product (All-in-One)
+  CompleteNetworkStackProduct:
+    Type: AWS::ServiceCatalog::CloudFormationProduct
+    Properties:
+      Name: Complete Network Stack
+      Description: Testing complete network infrastructure - VPC, Subnets, Route Tables, VPC Endpoints, Security Groups (All-in-One)
+      Owner: !Ref PortfolioOwner
+      Distributor: !Ref PortfolioOwner
+      ProvisioningArtifactParameters:
+        - Name: v1.0.0
+          Description: Initial version for testing - Complete network stack
+          Info:
+            LoadTemplateFromURL: !Sub 'https://${S3BucketName}.s3.${AWS::Region}.amazonaws.com/${S3KeyPrefix}network-stack-all.yaml'
+      Tags:
+        - Key: ProductType
+          Value: Network
+        - Key: Purpose
+          Value: Testing
+        - Key: StackType
+          Value: Complete
+
   # Associate Products with Portfolio
   VPCProductPortfolioAssociation:
     Type: AWS::ServiceCatalog::PortfolioProductAssociation
@@ -165,6 +186,12 @@ Resources:
     Properties:
       PortfolioId: !Ref NetworkPortfolio
       ProductId: !Ref SecurityGroupsProduct
+
+  CompleteNetworkStackProductPortfolioAssociation:
+    Type: AWS::ServiceCatalog::PortfolioProductAssociation
+    Properties:
+      PortfolioId: !Ref NetworkPortfolio
+      ProductId: !Ref CompleteNetworkStackProduct
 
 Outputs:
   PortfolioId:
@@ -202,3 +229,9 @@ Outputs:
     Value: !Ref SecurityGroupsProduct
     Export:
       Name: !Sub '${AWS::StackName}-SecurityGroupsProductId'
+
+  CompleteNetworkStackProductId:
+    Description: Complete Network Stack Product ID
+    Value: !Ref CompleteNetworkStackProduct
+    Export:
+      Name: !Sub '${AWS::StackName}-CompleteNetworkStackProductId'
