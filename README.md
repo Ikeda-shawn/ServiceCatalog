@@ -27,9 +27,24 @@
 └── service-catalog-portfolio.yaml # Service Catalogポートフォリオ定義
 ```
 
-## デプロイ手順
+## デプロイ手順 (AWS CloudShell使用)
 
-### 1. S3バケットの作成とテンプレートのアップロード
+### 1. AWS CloudShellの起動
+
+AWSコンソールからCloudShellを起動します(画面右上のアイコン)。
+
+### 2. リポジトリのクローンとディレクトリ移動
+
+```bash
+# GitHubからリポジトリをクローン
+git clone https://github.com/your-username/ServiceCatalog.git
+cd ServiceCatalog
+
+# または、ファイルをアップロード
+# CloudShellの「Actions」→「Upload file」からファイルをアップロードすることも可能
+```
+
+### 3. S3バケットの作成とテンプレートのアップロード
 
 ```bash
 # S3バケット名を環境変数に設定
@@ -43,9 +58,10 @@ aws s3 mb s3://${BUCKET_NAME} --region ${REGION}
 aws s3 cp templates/ s3://${BUCKET_NAME}/service-catalog/templates/ --recursive
 ```
 
-### 2. Service Catalogポートフォリオのデプロイ
+### 4. Service Catalogポートフォリオのデプロイ
 
 ```bash
+# CloudShellではローカルファイルを直接使用できます
 aws cloudformation create-stack \
   --stack-name network-service-catalog \
   --template-body file://service-catalog-portfolio.yaml \
@@ -53,9 +69,15 @@ aws cloudformation create-stack \
     ParameterKey=S3BucketName,ParameterValue=${BUCKET_NAME} \
     ParameterKey=S3KeyPrefix,ParameterValue=service-catalog/templates/ \
   --region ${REGION}
+
+# デプロイ状況の確認
+aws cloudformation describe-stacks \
+  --stack-name network-service-catalog \
+  --region ${REGION} \
+  --query 'Stacks[0].StackStatus'
 ```
 
-### 3. ポートフォリオへのアクセス権限付与
+### 5. ポートフォリオへのアクセス権限付与
 
 Service Catalogコンソールから、ポートフォリオにIAMユーザー/ロール/グループを追加します。
 
