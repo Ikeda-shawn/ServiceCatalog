@@ -1,0 +1,204 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: 'Service Catalog Portfolio and Products for Network Infrastructure (Testing/Development Purpose)'
+
+Parameters:
+  PortfolioName:
+    Type: String
+    Default: 'Network Infrastructure Portfolio'
+    Description: Name of the Service Catalog Portfolio
+
+  PortfolioDescription:
+    Type: String
+    Default: 'Testing portfolio containing network infrastructure products (VPC, Subnets, Route Tables, VPC Endpoints, Security Groups)'
+    Description: Description of the Service Catalog Portfolio
+
+  PortfolioOwner:
+    Type: String
+    Default: 'Platform Team'
+    Description: Owner of the Service Catalog Portfolio
+
+  S3BucketName:
+    Type: String
+    Description: S3 bucket name where CloudFormation templates are stored
+
+  S3KeyPrefix:
+    Type: String
+    Default: 'service-catalog/templates/'
+    Description: S3 key prefix for CloudFormation templates
+
+Resources:
+  # Service Catalog Portfolio
+  NetworkPortfolio:
+    Type: AWS::ServiceCatalog::Portfolio
+    Properties:
+      DisplayName: !Ref PortfolioName
+      Description: !Ref PortfolioDescription
+      ProviderName: !Ref PortfolioOwner
+      Tags:
+        - Key: ManagedBy
+          Value: CloudFormation
+        - Key: Purpose
+          Value: Testing
+
+  # VPC Product
+  VPCProduct:
+    Type: AWS::ServiceCatalog::CloudFormationProduct
+    Properties:
+      Name: VPC
+      Description: Testing VPC with Internet Gateway
+      Owner: !Ref PortfolioOwner
+      Distributor: !Ref PortfolioOwner
+      ProvisioningArtifactParameters:
+        - Name: v1.0.0
+          Description: Initial version for testing
+          Info:
+            LoadTemplateFromURL: !Sub 'https://${S3BucketName}.s3.${AWS::Region}.amazonaws.com/${S3KeyPrefix}vpc.yaml'
+      Tags:
+        - Key: ProductType
+          Value: Network
+        - Key: Purpose
+          Value: Testing
+
+  # Subnets Product
+  SubnetsProduct:
+    Type: AWS::ServiceCatalog::CloudFormationProduct
+    Properties:
+      Name: Subnets
+      Description: Testing Public and Private Subnets across multiple AZs (2 public, 6 private)
+      Owner: !Ref PortfolioOwner
+      Distributor: !Ref PortfolioOwner
+      ProvisioningArtifactParameters:
+        - Name: v1.0.0
+          Description: Initial version for testing
+          Info:
+            LoadTemplateFromURL: !Sub 'https://${S3BucketName}.s3.${AWS::Region}.amazonaws.com/${S3KeyPrefix}subnets.yaml'
+      Tags:
+        - Key: ProductType
+          Value: Network
+        - Key: Purpose
+          Value: Testing
+
+  # Route Tables Product
+  RouteTablesProduct:
+    Type: AWS::ServiceCatalog::CloudFormationProduct
+    Properties:
+      Name: Route Tables
+      Description: Testing Route Tables with NAT Gateways for public and private subnets
+      Owner: !Ref PortfolioOwner
+      Distributor: !Ref PortfolioOwner
+      ProvisioningArtifactParameters:
+        - Name: v1.0.0
+          Description: Initial version for testing
+          Info:
+            LoadTemplateFromURL: !Sub 'https://${S3BucketName}.s3.${AWS::Region}.amazonaws.com/${S3KeyPrefix}route-tables.yaml'
+      Tags:
+        - Key: ProductType
+          Value: Network
+        - Key: Purpose
+          Value: Testing
+
+  # VPC Endpoints Product
+  VPCEndpointsProduct:
+    Type: AWS::ServiceCatalog::CloudFormationProduct
+    Properties:
+      Name: VPC Endpoints
+      Description: Testing VPC Endpoints for AWS services
+      Owner: !Ref PortfolioOwner
+      Distributor: !Ref PortfolioOwner
+      ProvisioningArtifactParameters:
+        - Name: v1.0.0
+          Description: Initial version for testing
+          Info:
+            LoadTemplateFromURL: !Sub 'https://${S3BucketName}.s3.${AWS::Region}.amazonaws.com/${S3KeyPrefix}vpc-endpoints.yaml'
+      Tags:
+        - Key: ProductType
+          Value: Network
+        - Key: Purpose
+          Value: Testing
+
+  # Security Groups Product
+  SecurityGroupsProduct:
+    Type: AWS::ServiceCatalog::CloudFormationProduct
+    Properties:
+      Name: Security Groups
+      Description: Testing security groups for web, app, database, and management layers
+      Owner: !Ref PortfolioOwner
+      Distributor: !Ref PortfolioOwner
+      ProvisioningArtifactParameters:
+        - Name: v1.0.0
+          Description: Initial version for testing
+          Info:
+            LoadTemplateFromURL: !Sub 'https://${S3BucketName}.s3.${AWS::Region}.amazonaws.com/${S3KeyPrefix}security-groups.yaml'
+      Tags:
+        - Key: ProductType
+          Value: Security
+        - Key: Purpose
+          Value: Testing
+
+  # Associate Products with Portfolio
+  VPCProductPortfolioAssociation:
+    Type: AWS::ServiceCatalog::PortfolioProductAssociation
+    Properties:
+      PortfolioId: !Ref NetworkPortfolio
+      ProductId: !Ref VPCProduct
+
+  SubnetsProductPortfolioAssociation:
+    Type: AWS::ServiceCatalog::PortfolioProductAssociation
+    Properties:
+      PortfolioId: !Ref NetworkPortfolio
+      ProductId: !Ref SubnetsProduct
+
+  RouteTablesProductPortfolioAssociation:
+    Type: AWS::ServiceCatalog::PortfolioProductAssociation
+    Properties:
+      PortfolioId: !Ref NetworkPortfolio
+      ProductId: !Ref RouteTablesProduct
+
+  VPCEndpointsProductPortfolioAssociation:
+    Type: AWS::ServiceCatalog::PortfolioProductAssociation
+    Properties:
+      PortfolioId: !Ref NetworkPortfolio
+      ProductId: !Ref VPCEndpointsProduct
+
+  SecurityGroupsProductPortfolioAssociation:
+    Type: AWS::ServiceCatalog::PortfolioProductAssociation
+    Properties:
+      PortfolioId: !Ref NetworkPortfolio
+      ProductId: !Ref SecurityGroupsProduct
+
+Outputs:
+  PortfolioId:
+    Description: Service Catalog Portfolio ID
+    Value: !Ref NetworkPortfolio
+    Export:
+      Name: !Sub '${AWS::StackName}-PortfolioId'
+
+  VPCProductId:
+    Description: VPC Product ID
+    Value: !Ref VPCProduct
+    Export:
+      Name: !Sub '${AWS::StackName}-VPCProductId'
+
+  SubnetsProductId:
+    Description: Subnets Product ID
+    Value: !Ref SubnetsProduct
+    Export:
+      Name: !Sub '${AWS::StackName}-SubnetsProductId'
+
+  RouteTablesProductId:
+    Description: Route Tables Product ID
+    Value: !Ref RouteTablesProduct
+    Export:
+      Name: !Sub '${AWS::StackName}-RouteTablesProductId'
+
+  VPCEndpointsProductId:
+    Description: VPC Endpoints Product ID
+    Value: !Ref VPCEndpointsProduct
+    Export:
+      Name: !Sub '${AWS::StackName}-VPCEndpointsProductId'
+
+  SecurityGroupsProductId:
+    Description: Security Groups Product ID
+    Value: !Ref SecurityGroupsProduct
+    Export:
+      Name: !Sub '${AWS::StackName}-SecurityGroupsProductId'

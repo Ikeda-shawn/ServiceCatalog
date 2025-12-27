@@ -1,0 +1,269 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: 'Subnets CloudFormation Template for Service Catalog'
+
+Parameters:
+  SystemName:
+    Type: String
+    Description: System name for resource naming
+    AllowedPattern: '^[a-zA-Z0-9-]+$'
+    ConstraintDescription: Must contain only alphanumeric characters and hyphens
+
+  Env:
+    Type: String
+    Description: Environment name
+    AllowedValues:
+      - dev
+      - stg
+      - prod
+
+  VPCStackName:
+    Type: String
+    Description: Name of the VPC stack to import VPC ID
+
+  # Public Subnet CIDRs
+  PublicSubnetACidr:
+    Type: String
+    Default: '10.0.1.0/24'
+    Description: CIDR block for Public Subnet in AZ-a
+    AllowedPattern: '^(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\.){3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])(\/([0-9]|[1-2][0-9]|3[0-2]))$'
+
+  PublicSubnetCCidr:
+    Type: String
+    Default: '10.0.2.0/24'
+    Description: CIDR block for Public Subnet in AZ-c
+    AllowedPattern: '^(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\.){3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])(\/([0-9]|[1-2][0-9]|3[0-2]))$'
+
+  # Private Subnet CIDRs for AZ-a
+  PrivateSubnetA1Cidr:
+    Type: String
+    Default: '10.0.11.0/24'
+    Description: CIDR block for Private Subnet 1 in AZ-a
+    AllowedPattern: '^(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\.){3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])(\/([0-9]|[1-2][0-9]|3[0-2]))$'
+
+  PrivateSubnetA2Cidr:
+    Type: String
+    Default: '10.0.12.0/24'
+    Description: CIDR block for Private Subnet 2 in AZ-a
+    AllowedPattern: '^(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\.){3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])(\/([0-9]|[1-2][0-9]|3[0-2]))$'
+
+  PrivateSubnetA3Cidr:
+    Type: String
+    Default: '10.0.13.0/24'
+    Description: CIDR block for Private Subnet 3 in AZ-a
+    AllowedPattern: '^(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\.){3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])(\/([0-9]|[1-2][0-9]|3[0-2]))$'
+
+  # Private Subnet CIDRs for AZ-c
+  PrivateSubnetC1Cidr:
+    Type: String
+    Default: '10.0.21.0/24'
+    Description: CIDR block for Private Subnet 1 in AZ-c
+    AllowedPattern: '^(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\.){3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])(\/([0-9]|[1-2][0-9]|3[0-2]))$'
+
+  PrivateSubnetC2Cidr:
+    Type: String
+    Default: '10.0.22.0/24'
+    Description: CIDR block for Private Subnet 2 in AZ-c
+    AllowedPattern: '^(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\.){3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])(\/([0-9]|[1-2][0-9]|3[0-2]))$'
+
+  PrivateSubnetC3Cidr:
+    Type: String
+    Default: '10.0.23.0/24'
+    Description: CIDR block for Private Subnet 3 in AZ-c
+    AllowedPattern: '^(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\.){3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])(\/([0-9]|[1-2][0-9]|3[0-2]))$'
+
+Resources:
+  # Public Subnets
+  PublicSubnetA:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId:
+        Fn::ImportValue: !Sub '${VPCStackName}-VPCId'
+      CidrBlock: !Ref PublicSubnetACidr
+      AvailabilityZone: !Select [0, !GetAZs '']
+      MapPublicIpOnLaunch: true
+      Tags:
+        - Key: Name
+          Value: !Sub '${SystemName}-${Env}-public-subnet-a'
+        - Key: Environment
+          Value: !Ref Env
+        - Key: SystemName
+          Value: !Ref SystemName
+        - Key: Type
+          Value: Public
+
+  PublicSubnetC:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId:
+        Fn::ImportValue: !Sub '${VPCStackName}-VPCId'
+      CidrBlock: !Ref PublicSubnetCCidr
+      AvailabilityZone: !Select [1, !GetAZs '']
+      MapPublicIpOnLaunch: true
+      Tags:
+        - Key: Name
+          Value: !Sub '${SystemName}-${Env}-public-subnet-c'
+        - Key: Environment
+          Value: !Ref Env
+        - Key: SystemName
+          Value: !Ref SystemName
+        - Key: Type
+          Value: Public
+
+  # Private Subnets in AZ-a
+  PrivateSubnetA1:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId:
+        Fn::ImportValue: !Sub '${VPCStackName}-VPCId'
+      CidrBlock: !Ref PrivateSubnetA1Cidr
+      AvailabilityZone: !Select [0, !GetAZs '']
+      MapPublicIpOnLaunch: false
+      Tags:
+        - Key: Name
+          Value: !Sub '${SystemName}-${Env}-private-subnet-a-1'
+        - Key: Environment
+          Value: !Ref Env
+        - Key: SystemName
+          Value: !Ref SystemName
+        - Key: Type
+          Value: Private
+
+  PrivateSubnetA2:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId:
+        Fn::ImportValue: !Sub '${VPCStackName}-VPCId'
+      CidrBlock: !Ref PrivateSubnetA2Cidr
+      AvailabilityZone: !Select [0, !GetAZs '']
+      MapPublicIpOnLaunch: false
+      Tags:
+        - Key: Name
+          Value: !Sub '${SystemName}-${Env}-private-subnet-a-2'
+        - Key: Environment
+          Value: !Ref Env
+        - Key: SystemName
+          Value: !Ref SystemName
+        - Key: Type
+          Value: Private
+
+  PrivateSubnetA3:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId:
+        Fn::ImportValue: !Sub '${VPCStackName}-VPCId'
+      CidrBlock: !Ref PrivateSubnetA3Cidr
+      AvailabilityZone: !Select [0, !GetAZs '']
+      MapPublicIpOnLaunch: false
+      Tags:
+        - Key: Name
+          Value: !Sub '${SystemName}-${Env}-private-subnet-a-3'
+        - Key: Environment
+          Value: !Ref Env
+        - Key: SystemName
+          Value: !Ref SystemName
+        - Key: Type
+          Value: Private
+
+  # Private Subnets in AZ-c
+  PrivateSubnetC1:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId:
+        Fn::ImportValue: !Sub '${VPCStackName}-VPCId'
+      CidrBlock: !Ref PrivateSubnetC1Cidr
+      AvailabilityZone: !Select [1, !GetAZs '']
+      MapPublicIpOnLaunch: false
+      Tags:
+        - Key: Name
+          Value: !Sub '${SystemName}-${Env}-private-subnet-c-1'
+        - Key: Environment
+          Value: !Ref Env
+        - Key: SystemName
+          Value: !Ref SystemName
+        - Key: Type
+          Value: Private
+
+  PrivateSubnetC2:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId:
+        Fn::ImportValue: !Sub '${VPCStackName}-VPCId'
+      CidrBlock: !Ref PrivateSubnetC2Cidr
+      AvailabilityZone: !Select [1, !GetAZs '']
+      MapPublicIpOnLaunch: false
+      Tags:
+        - Key: Name
+          Value: !Sub '${SystemName}-${Env}-private-subnet-c-2'
+        - Key: Environment
+          Value: !Ref Env
+        - Key: SystemName
+          Value: !Ref SystemName
+        - Key: Type
+          Value: Private
+
+  PrivateSubnetC3:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId:
+        Fn::ImportValue: !Sub '${VPCStackName}-VPCId'
+      CidrBlock: !Ref PrivateSubnetC3Cidr
+      AvailabilityZone: !Select [1, !GetAZs '']
+      MapPublicIpOnLaunch: false
+      Tags:
+        - Key: Name
+          Value: !Sub '${SystemName}-${Env}-private-subnet-c-3'
+        - Key: Environment
+          Value: !Ref Env
+        - Key: SystemName
+          Value: !Ref SystemName
+        - Key: Type
+          Value: Private
+
+Outputs:
+  PublicSubnetAId:
+    Description: Public Subnet A ID
+    Value: !Ref PublicSubnetA
+    Export:
+      Name: !Sub '${AWS::StackName}-PublicSubnetAId'
+
+  PublicSubnetCId:
+    Description: Public Subnet C ID
+    Value: !Ref PublicSubnetC
+    Export:
+      Name: !Sub '${AWS::StackName}-PublicSubnetCId'
+
+  PrivateSubnetA1Id:
+    Description: Private Subnet A1 ID
+    Value: !Ref PrivateSubnetA1
+    Export:
+      Name: !Sub '${AWS::StackName}-PrivateSubnetA1Id'
+
+  PrivateSubnetA2Id:
+    Description: Private Subnet A2 ID
+    Value: !Ref PrivateSubnetA2
+    Export:
+      Name: !Sub '${AWS::StackName}-PrivateSubnetA2Id'
+
+  PrivateSubnetA3Id:
+    Description: Private Subnet A3 ID
+    Value: !Ref PrivateSubnetA3
+    Export:
+      Name: !Sub '${AWS::StackName}-PrivateSubnetA3Id'
+
+  PrivateSubnetC1Id:
+    Description: Private Subnet C1 ID
+    Value: !Ref PrivateSubnetC1
+    Export:
+      Name: !Sub '${AWS::StackName}-PrivateSubnetC1Id'
+
+  PrivateSubnetC2Id:
+    Description: Private Subnet C2 ID
+    Value: !Ref PrivateSubnetC2
+    Export:
+      Name: !Sub '${AWS::StackName}-PrivateSubnetC2Id'
+
+  PrivateSubnetC3Id:
+    Description: Private Subnet C3 ID
+    Value: !Ref PrivateSubnetC3
+    Export:
+      Name: !Sub '${AWS::StackName}-PrivateSubnetC3Id'

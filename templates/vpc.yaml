@@ -1,0 +1,86 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: 'VPC CloudFormation Template for Service Catalog'
+
+Parameters:
+  SystemName:
+    Type: String
+    Description: System name for resource naming
+    AllowedPattern: '^[a-zA-Z0-9-]+$'
+    ConstraintDescription: Must contain only alphanumeric characters and hyphens
+
+  Env:
+    Type: String
+    Description: Environment name
+    AllowedValues:
+      - dev
+      - stg
+      - prod
+
+  VPCCidr:
+    Type: String
+    Default: '10.0.0.0/16'
+    Description: CIDR block for the VPC
+    AllowedPattern: '^(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\.){3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])(\/([0-9]|[1-2][0-9]|3[0-2]))$'
+
+Resources:
+  VPC:
+    Type: AWS::EC2::VPC
+    Properties:
+      CidrBlock: !Ref VPCCidr
+      EnableDnsHostnames: true
+      EnableDnsSupport: true
+      Tags:
+        - Key: Name
+          Value: !Sub '${SystemName}-${Env}-vpc'
+        - Key: Environment
+          Value: !Ref Env
+        - Key: SystemName
+          Value: !Ref SystemName
+
+  InternetGateway:
+    Type: AWS::EC2::InternetGateway
+    Properties:
+      Tags:
+        - Key: Name
+          Value: !Sub '${SystemName}-${Env}-igw'
+        - Key: Environment
+          Value: !Ref Env
+        - Key: SystemName
+          Value: !Ref SystemName
+
+  AttachGateway:
+    Type: AWS::EC2::VPCGatewayAttachment
+    Properties:
+      VpcId: !Ref VPC
+      InternetGatewayId: !Ref InternetGateway
+
+Outputs:
+  VPCId:
+    Description: VPC ID
+    Value: !Ref VPC
+    Export:
+      Name: !Sub '${AWS::StackName}-VPCId'
+
+  VPCCidr:
+    Description: VPC CIDR Block
+    Value: !Ref VPCCidr
+    Export:
+      Name: !Sub '${AWS::StackName}-VPCCidr'
+
+  InternetGatewayId:
+    Description: Internet Gateway ID
+    Value: !Ref InternetGateway
+    Export:
+      Name: !Sub '${AWS::StackName}-IGWId'
+
+  SystemName:
+    Description: System name
+    Value: !Ref SystemName
+    Export:
+      Name: !Sub '${AWS::StackName}-SystemName'
+
+  Env:
+    Description: Environment name
+    Value: !Ref Env
+    Export:
+      Name: !Sub '${AWS::StackName}-Env'

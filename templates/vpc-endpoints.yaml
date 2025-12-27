@@ -1,0 +1,178 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: 'VPC Endpoints CloudFormation Template for Service Catalog'
+
+Parameters:
+  SystemName:
+    Type: String
+    Description: System name for resource naming
+    AllowedPattern: '^[a-zA-Z0-9-]+$'
+    ConstraintDescription: Must contain only alphanumeric characters and hyphens
+
+  Env:
+    Type: String
+    Description: Environment name
+    AllowedValues:
+      - dev
+      - stg
+      - prod
+
+  VPCStackName:
+    Type: String
+    Description: Name of the VPC stack to import VPC ID
+
+  SubnetStackName:
+    Type: String
+    Description: Name of the Subnet stack to import Subnet IDs
+
+  RouteTableStackName:
+    Type: String
+    Description: Name of the Route Table stack to import Route Table IDs
+
+  SecurityGroupStackName:
+    Type: String
+    Description: Name of the Security Group stack to import Security Group IDs
+
+  EndpointServices:
+    Type: CommaDelimitedList
+    Description: Comma-delimited list of AWS services for VPC endpoints (e.g., s3,dynamodb,ec2)
+    Default: 's3,dynamodb'
+
+Resources:
+  # Gateway VPC Endpoints (S3, DynamoDB)
+  S3Endpoint:
+    Type: AWS::EC2::VPCEndpoint
+    Properties:
+      VpcId:
+        Fn::ImportValue: !Sub '${VPCStackName}-VPCId'
+      ServiceName: !Sub 'com.amazonaws.${AWS::Region}.s3'
+      VpcEndpointType: Gateway
+      RouteTableIds:
+        - Fn::ImportValue: !Sub '${RouteTableStackName}-PublicRouteTableId'
+        - Fn::ImportValue: !Sub '${RouteTableStackName}-PrivateRouteTableAId'
+        - Fn::ImportValue: !Sub '${RouteTableStackName}-PrivateRouteTableCId'
+
+  DynamoDBEndpoint:
+    Type: AWS::EC2::VPCEndpoint
+    Properties:
+      VpcId:
+        Fn::ImportValue: !Sub '${VPCStackName}-VPCId'
+      ServiceName: !Sub 'com.amazonaws.${AWS::Region}.dynamodb'
+      VpcEndpointType: Gateway
+      RouteTableIds:
+        - Fn::ImportValue: !Sub '${RouteTableStackName}-PublicRouteTableId'
+        - Fn::ImportValue: !Sub '${RouteTableStackName}-PrivateRouteTableAId'
+        - Fn::ImportValue: !Sub '${RouteTableStackName}-PrivateRouteTableCId'
+
+  # Interface VPC Endpoints
+  EC2Endpoint:
+    Type: AWS::EC2::VPCEndpoint
+    Properties:
+      VpcId:
+        Fn::ImportValue: !Sub '${VPCStackName}-VPCId'
+      ServiceName: !Sub 'com.amazonaws.${AWS::Region}.ec2'
+      VpcEndpointType: Interface
+      PrivateDnsEnabled: true
+      SubnetIds:
+        - Fn::ImportValue: !Sub '${SubnetStackName}-PrivateSubnetA1Id'
+        - Fn::ImportValue: !Sub '${SubnetStackName}-PrivateSubnetC1Id'
+      SecurityGroupIds:
+        - Fn::ImportValue: !Sub '${SecurityGroupStackName}-VPCEndpointSecurityGroupId'
+
+  EC2MessagesEndpoint:
+    Type: AWS::EC2::VPCEndpoint
+    Properties:
+      VpcId:
+        Fn::ImportValue: !Sub '${VPCStackName}-VPCId'
+      ServiceName: !Sub 'com.amazonaws.${AWS::Region}.ec2messages'
+      VpcEndpointType: Interface
+      PrivateDnsEnabled: true
+      SubnetIds:
+        - Fn::ImportValue: !Sub '${SubnetStackName}-PrivateSubnetA1Id'
+        - Fn::ImportValue: !Sub '${SubnetStackName}-PrivateSubnetC1Id'
+      SecurityGroupIds:
+        - Fn::ImportValue: !Sub '${SecurityGroupStackName}-VPCEndpointSecurityGroupId'
+
+  SSMEndpoint:
+    Type: AWS::EC2::VPCEndpoint
+    Properties:
+      VpcId:
+        Fn::ImportValue: !Sub '${VPCStackName}-VPCId'
+      ServiceName: !Sub 'com.amazonaws.${AWS::Region}.ssm'
+      VpcEndpointType: Interface
+      PrivateDnsEnabled: true
+      SubnetIds:
+        - Fn::ImportValue: !Sub '${SubnetStackName}-PrivateSubnetA1Id'
+        - Fn::ImportValue: !Sub '${SubnetStackName}-PrivateSubnetC1Id'
+      SecurityGroupIds:
+        - Fn::ImportValue: !Sub '${SecurityGroupStackName}-VPCEndpointSecurityGroupId'
+
+  SSMMessagesEndpoint:
+    Type: AWS::EC2::VPCEndpoint
+    Properties:
+      VpcId:
+        Fn::ImportValue: !Sub '${VPCStackName}-VPCId'
+      ServiceName: !Sub 'com.amazonaws.${AWS::Region}.ssmmessages'
+      VpcEndpointType: Interface
+      PrivateDnsEnabled: true
+      SubnetIds:
+        - Fn::ImportValue: !Sub '${SubnetStackName}-PrivateSubnetA1Id'
+        - Fn::ImportValue: !Sub '${SubnetStackName}-PrivateSubnetC1Id'
+      SecurityGroupIds:
+        - Fn::ImportValue: !Sub '${SecurityGroupStackName}-VPCEndpointSecurityGroupId'
+
+  CloudWatchLogsEndpoint:
+    Type: AWS::EC2::VPCEndpoint
+    Properties:
+      VpcId:
+        Fn::ImportValue: !Sub '${VPCStackName}-VPCId'
+      ServiceName: !Sub 'com.amazonaws.${AWS::Region}.logs'
+      VpcEndpointType: Interface
+      PrivateDnsEnabled: true
+      SubnetIds:
+        - Fn::ImportValue: !Sub '${SubnetStackName}-PrivateSubnetA1Id'
+        - Fn::ImportValue: !Sub '${SubnetStackName}-PrivateSubnetC1Id'
+      SecurityGroupIds:
+        - Fn::ImportValue: !Sub '${SecurityGroupStackName}-VPCEndpointSecurityGroupId'
+
+Outputs:
+  S3EndpointId:
+    Description: S3 VPC Endpoint ID
+    Value: !Ref S3Endpoint
+    Export:
+      Name: !Sub '${AWS::StackName}-S3EndpointId'
+
+  DynamoDBEndpointId:
+    Description: DynamoDB VPC Endpoint ID
+    Value: !Ref DynamoDBEndpoint
+    Export:
+      Name: !Sub '${AWS::StackName}-DynamoDBEndpointId'
+
+  EC2EndpointId:
+    Description: EC2 VPC Endpoint ID
+    Value: !Ref EC2Endpoint
+    Export:
+      Name: !Sub '${AWS::StackName}-EC2EndpointId'
+
+  EC2MessagesEndpointId:
+    Description: EC2 Messages VPC Endpoint ID
+    Value: !Ref EC2MessagesEndpoint
+    Export:
+      Name: !Sub '${AWS::StackName}-EC2MessagesEndpointId'
+
+  SSMEndpointId:
+    Description: SSM VPC Endpoint ID
+    Value: !Ref SSMEndpoint
+    Export:
+      Name: !Sub '${AWS::StackName}-SSMEndpointId'
+
+  SSMMessagesEndpointId:
+    Description: SSM Messages VPC Endpoint ID
+    Value: !Ref SSMMessagesEndpoint
+    Export:
+      Name: !Sub '${AWS::StackName}-SSMMessagesEndpointId'
+
+  CloudWatchLogsEndpointId:
+    Description: CloudWatch Logs VPC Endpoint ID
+    Value: !Ref CloudWatchLogsEndpoint
+    Export:
+      Name: !Sub '${AWS::StackName}-CloudWatchLogsEndpointId'

@@ -1,0 +1,259 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: 'Route Tables CloudFormation Template for Service Catalog'
+
+Parameters:
+  SystemName:
+    Type: String
+    Description: System name for resource naming
+    AllowedPattern: '^[a-zA-Z0-9-]+$'
+    ConstraintDescription: Must contain only alphanumeric characters and hyphens
+
+  Env:
+    Type: String
+    Description: Environment name
+    AllowedValues:
+      - dev
+      - stg
+      - prod
+
+  VPCStackName:
+    Type: String
+    Description: Name of the VPC stack to import VPC ID and IGW ID
+
+  SubnetStackName:
+    Type: String
+    Description: Name of the Subnet stack to import Subnet IDs
+
+  CreateNATGateway:
+    Type: String
+    Description: Whether to create NAT Gateway for private subnets
+    Default: 'true'
+    AllowedValues:
+      - 'true'
+      - 'false'
+
+Conditions:
+  CreateNAT: !Equals [!Ref CreateNATGateway, 'true']
+
+Resources:
+  # Elastic IPs for NAT Gateways
+  NATGatewayEIPA:
+    Type: AWS::EC2::EIP
+    Condition: CreateNAT
+    Properties:
+      Domain: vpc
+      Tags:
+        - Key: Name
+          Value: !Sub '${SystemName}-${Env}-nat-eip-a'
+        - Key: Environment
+          Value: !Ref Env
+        - Key: SystemName
+          Value: !Ref SystemName
+
+  NATGatewayEIPC:
+    Type: AWS::EC2::EIP
+    Condition: CreateNAT
+    Properties:
+      Domain: vpc
+      Tags:
+        - Key: Name
+          Value: !Sub '${SystemName}-${Env}-nat-eip-c'
+        - Key: Environment
+          Value: !Ref Env
+        - Key: SystemName
+          Value: !Ref SystemName
+
+  # NAT Gateways
+  NATGatewayA:
+    Type: AWS::EC2::NatGateway
+    Condition: CreateNAT
+    Properties:
+      AllocationId: !GetAtt NATGatewayEIPA.AllocationId
+      SubnetId:
+        Fn::ImportValue: !Sub '${SubnetStackName}-PublicSubnetAId'
+      Tags:
+        - Key: Name
+          Value: !Sub '${SystemName}-${Env}-nat-gateway-a'
+        - Key: Environment
+          Value: !Ref Env
+        - Key: SystemName
+          Value: !Ref SystemName
+
+  NATGatewayC:
+    Type: AWS::EC2::NatGateway
+    Condition: CreateNAT
+    Properties:
+      AllocationId: !GetAtt NATGatewayEIPC.AllocationId
+      SubnetId:
+        Fn::ImportValue: !Sub '${SubnetStackName}-PublicSubnetCId'
+      Tags:
+        - Key: Name
+          Value: !Sub '${SystemName}-${Env}-nat-gateway-c'
+        - Key: Environment
+          Value: !Ref Env
+        - Key: SystemName
+          Value: !Ref SystemName
+
+  # Public Route Table
+  PublicRouteTable:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId:
+        Fn::ImportValue: !Sub '${VPCStackName}-VPCId'
+      Tags:
+        - Key: Name
+          Value: !Sub '${SystemName}-${Env}-public-rtb'
+        - Key: Environment
+          Value: !Ref Env
+        - Key: SystemName
+          Value: !Ref SystemName
+        - Key: Type
+          Value: Public
+
+  PublicRoute:
+    Type: AWS::EC2::Route
+    Properties:
+      RouteTableId: !Ref PublicRouteTable
+      DestinationCidrBlock: '0.0.0.0/0'
+      GatewayId:
+        Fn::ImportValue: !Sub '${VPCStackName}-IGWId'
+
+  # Public Subnet Associations
+  PublicSubnetARouteTableAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId:
+        Fn::ImportValue: !Sub '${SubnetStackName}-PublicSubnetAId'
+      RouteTableId: !Ref PublicRouteTable
+
+  PublicSubnetCRouteTableAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId:
+        Fn::ImportValue: !Sub '${SubnetStackName}-PublicSubnetCId'
+      RouteTableId: !Ref PublicRouteTable
+
+  # Private Route Tables for AZ-a
+  PrivateRouteTableA:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId:
+        Fn::ImportValue: !Sub '${VPCStackName}-VPCId'
+      Tags:
+        - Key: Name
+          Value: !Sub '${SystemName}-${Env}-private-rtb-a'
+        - Key: Environment
+          Value: !Ref Env
+        - Key: SystemName
+          Value: !Ref SystemName
+        - Key: Type
+          Value: Private
+
+  PrivateRouteA:
+    Type: AWS::EC2::Route
+    Condition: CreateNAT
+    Properties:
+      RouteTableId: !Ref PrivateRouteTableA
+      DestinationCidrBlock: '0.0.0.0/0'
+      NatGatewayId: !Ref NATGatewayA
+
+  # Private Subnet Associations for AZ-a
+  PrivateSubnetA1RouteTableAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId:
+        Fn::ImportValue: !Sub '${SubnetStackName}-PrivateSubnetA1Id'
+      RouteTableId: !Ref PrivateRouteTableA
+
+  PrivateSubnetA2RouteTableAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId:
+        Fn::ImportValue: !Sub '${SubnetStackName}-PrivateSubnetA2Id'
+      RouteTableId: !Ref PrivateRouteTableA
+
+  PrivateSubnetA3RouteTableAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId:
+        Fn::ImportValue: !Sub '${SubnetStackName}-PrivateSubnetA3Id'
+      RouteTableId: !Ref PrivateRouteTableA
+
+  # Private Route Tables for AZ-c
+  PrivateRouteTableC:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId:
+        Fn::ImportValue: !Sub '${VPCStackName}-VPCId'
+      Tags:
+        - Key: Name
+          Value: !Sub '${SystemName}-${Env}-private-rtb-c'
+        - Key: Environment
+          Value: !Ref Env
+        - Key: SystemName
+          Value: !Ref SystemName
+        - Key: Type
+          Value: Private
+
+  PrivateRouteC:
+    Type: AWS::EC2::Route
+    Condition: CreateNAT
+    Properties:
+      RouteTableId: !Ref PrivateRouteTableC
+      DestinationCidrBlock: '0.0.0.0/0'
+      NatGatewayId: !Ref NATGatewayC
+
+  # Private Subnet Associations for AZ-c
+  PrivateSubnetC1RouteTableAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId:
+        Fn::ImportValue: !Sub '${SubnetStackName}-PrivateSubnetC1Id'
+      RouteTableId: !Ref PrivateRouteTableC
+
+  PrivateSubnetC2RouteTableAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId:
+        Fn::ImportValue: !Sub '${SubnetStackName}-PrivateSubnetC2Id'
+      RouteTableId: !Ref PrivateRouteTableC
+
+  PrivateSubnetC3RouteTableAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId:
+        Fn::ImportValue: !Sub '${SubnetStackName}-PrivateSubnetC3Id'
+      RouteTableId: !Ref PrivateRouteTableC
+
+Outputs:
+  PublicRouteTableId:
+    Description: Public Route Table ID
+    Value: !Ref PublicRouteTable
+    Export:
+      Name: !Sub '${AWS::StackName}-PublicRouteTableId'
+
+  PrivateRouteTableAId:
+    Description: Private Route Table A ID
+    Value: !Ref PrivateRouteTableA
+    Export:
+      Name: !Sub '${AWS::StackName}-PrivateRouteTableAId'
+
+  PrivateRouteTableCId:
+    Description: Private Route Table C ID
+    Value: !Ref PrivateRouteTableC
+    Export:
+      Name: !Sub '${AWS::StackName}-PrivateRouteTableCId'
+
+  NATGatewayAId:
+    Condition: CreateNAT
+    Description: NAT Gateway A ID
+    Value: !Ref NATGatewayA
+    Export:
+      Name: !Sub '${AWS::StackName}-NATGatewayAId'
+
+  NATGatewayCId:
+    Condition: CreateNAT
+    Description: NAT Gateway C ID
+    Value: !Ref NATGatewayC
+    Export:
+      Name: !Sub '${AWS::StackName}-NATGatewayCId'

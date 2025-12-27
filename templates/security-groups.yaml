@@ -1,0 +1,179 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: 'Security Groups CloudFormation Template for Service Catalog'
+
+Parameters:
+  SystemName:
+    Type: String
+    Description: System name for resource naming
+    AllowedPattern: '^[a-zA-Z0-9-]+$'
+    ConstraintDescription: Must contain only alphanumeric characters and hyphens
+
+  Env:
+    Type: String
+    Description: Environment name
+    AllowedValues:
+      - dev
+      - stg
+      - prod
+
+  VPCStackName:
+    Type: String
+    Description: Name of the VPC stack to import VPC ID
+
+Resources:
+  # Security Group for VPC Endpoints
+  VPCEndpointSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupName: !Sub '${SystemName}-${Env}-vpce-sg'
+      GroupDescription: Security group for VPC Endpoints
+      VpcId:
+        Fn::ImportValue: !Sub '${VPCStackName}-VPCId'
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 443
+          ToPort: 443
+          CidrIp:
+            Fn::ImportValue: !Sub '${VPCStackName}-VPCCidr'
+          Description: Allow HTTPS from VPC
+      SecurityGroupEgress:
+        - IpProtocol: -1
+          CidrIp: 0.0.0.0/0
+          Description: Allow all outbound traffic
+      Tags:
+        - Key: Name
+          Value: !Sub '${SystemName}-${Env}-vpce-sg'
+        - Key: Environment
+          Value: !Ref Env
+        - Key: SystemName
+          Value: !Ref SystemName
+
+  # Security Group for Web Servers (ALB/Public)
+  WebSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupName: !Sub '${SystemName}-${Env}-web-sg'
+      GroupDescription: Security group for web servers and load balancers
+      VpcId:
+        Fn::ImportValue: !Sub '${VPCStackName}-VPCId'
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 443
+          ToPort: 443
+          CidrIp: 0.0.0.0/0
+          Description: Allow HTTPS from anywhere
+      SecurityGroupEgress:
+        - IpProtocol: -1
+          CidrIp: 0.0.0.0/0
+          Description: Allow all outbound traffic
+      Tags:
+        - Key: Name
+          Value: !Sub '${SystemName}-${Env}-web-sg'
+        - Key: Environment
+          Value: !Ref Env
+        - Key: SystemName
+          Value: !Ref SystemName
+
+  # Security Group for Application Servers
+  AppSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupName: !Sub '${SystemName}-${Env}-app-sg'
+      GroupDescription: Security group for application servers
+      VpcId:
+        Fn::ImportValue: !Sub '${VPCStackName}-VPCId'
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 8080
+          ToPort: 8080
+          SourceSecurityGroupId: !Ref WebSecurityGroup
+          Description: Allow traffic from web servers
+      SecurityGroupEgress:
+        - IpProtocol: -1
+          CidrIp: 0.0.0.0/0
+          Description: Allow all outbound traffic
+      Tags:
+        - Key: Name
+          Value: !Sub '${SystemName}-${Env}-app-sg'
+        - Key: Environment
+          Value: !Ref Env
+        - Key: SystemName
+          Value: !Ref SystemName
+
+  # Security Group for Database Servers
+  DBSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupName: !Sub '${SystemName}-${Env}-db-sg'
+      GroupDescription: Security group for database servers
+      VpcId:
+        Fn::ImportValue: !Sub '${VPCStackName}-VPCId'
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 3306
+          ToPort: 3306
+          SourceSecurityGroupId: !Ref AppSecurityGroup
+          Description: Allow MySQL from application servers
+        - IpProtocol: tcp
+          FromPort: 5432
+          ToPort: 5432
+          SourceSecurityGroupId: !Ref AppSecurityGroup
+          Description: Allow PostgreSQL from application servers
+      Tags:
+        - Key: Name
+          Value: !Sub '${SystemName}-${Env}-db-sg'
+        - Key: Environment
+          Value: !Ref Env
+        - Key: SystemName
+          Value: !Ref SystemName
+
+  # Security Group for Management/Bastion (Session Manager)
+  ManagementSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupName: !Sub '${SystemName}-${Env}-mgmt-sg'
+      GroupDescription: Security group for management hosts using Session Manager
+      VpcId:
+        Fn::ImportValue: !Sub '${VPCStackName}-VPCId'
+      SecurityGroupEgress:
+        - IpProtocol: -1
+          CidrIp: 0.0.0.0/0
+          Description: Allow all outbound traffic
+      Tags:
+        - Key: Name
+          Value: !Sub '${SystemName}-${Env}-mgmt-sg'
+        - Key: Environment
+          Value: !Ref Env
+        - Key: SystemName
+          Value: !Ref SystemName
+
+Outputs:
+  VPCEndpointSecurityGroupId:
+    Description: VPC Endpoint Security Group ID
+    Value: !Ref VPCEndpointSecurityGroup
+    Export:
+      Name: !Sub '${AWS::StackName}-VPCEndpointSecurityGroupId'
+
+  WebSecurityGroupId:
+    Description: Web Security Group ID
+    Value: !Ref WebSecurityGroup
+    Export:
+      Name: !Sub '${AWS::StackName}-WebSecurityGroupId'
+
+  AppSecurityGroupId:
+    Description: Application Security Group ID
+    Value: !Ref AppSecurityGroup
+    Export:
+      Name: !Sub '${AWS::StackName}-AppSecurityGroupId'
+
+  DBSecurityGroupId:
+    Description: Database Security Group ID
+    Value: !Ref DBSecurityGroup
+    Export:
+      Name: !Sub '${AWS::StackName}-DBSecurityGroupId'
+
+  ManagementSecurityGroupId:
+    Description: Management Security Group ID
+    Value: !Ref ManagementSecurityGroup
+    Export:
+      Name: !Sub '${AWS::StackName}-ManagementSecurityGroupId'
