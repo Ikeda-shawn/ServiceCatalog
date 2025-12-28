@@ -8,22 +8,33 @@
 
 ### 製品一覧
 
+#### 推奨: 一括デプロイ製品
+
+- **Complete Network Stack** ⭐ - ネットワークインフラ全体を一括でデプロイ
+  - VPC、Subnets、Route Tables、VPC Endpoints、Security Groupsを1つのスタックで作成
+  - **通常はこちらを使用してください**
+
+#### 個別リソース製品 (カスタマイズが必要な場合のみ)
+
 1. **VPC** - VPCとインターネットゲートウェイ
 2. **Subnets** - パブリックサブネット2つ(AZ-a/c)、プライベートサブネット6つ(AZ-a/c)
 3. **Route Tables** - ルートテーブルとNATゲートウェイ
 4. **VPC Endpoints** - AWSサービス用のVPCエンドポイント
 5. **Security Groups** - Web、アプリケーション、データベース、管理用セキュリティグループ
 
+> **注意**: 個別リソース製品を使用する場合は、依存関係に従って正しい順序でデプロイする必要があります。
+
 ## ディレクトリ構造
 
-```
+```text
 .
 ├── templates/
-│   ├── vpc.yaml                  # VPCテンプレート
-│   ├── subnets.yaml              # サブネットテンプレート
-│   ├── route-tables.yaml         # ルートテーブルテンプレート
-│   ├── vpc-endpoints.yaml        # VPCエンドポイントテンプレート
-│   └── security-groups.yaml      # セキュリティグループテンプレート
+│   ├── network-stack-all.yaml    # 一括デプロイテンプレート (推奨)
+│   ├── vpc.yaml                  # VPCテンプレート (個別)
+│   ├── subnets.yaml              # サブネットテンプレート (個別)
+│   ├── route-tables.yaml         # ルートテーブルテンプレート (個別)
+│   ├── vpc-endpoints.yaml        # VPCエンドポイントテンプレート (個別)
+│   └── security-groups.yaml      # セキュリティグループテンプレート (個別)
 └── service-catalog-portfolio.yaml # Service Catalogポートフォリオ定義
 ```
 
@@ -81,9 +92,36 @@ aws cloudformation describe-stacks \
 
 Service Catalogコンソールから、ポートフォリオにIAMユーザー/ロール/グループを追加します。
 
-## リソースのプロビジョニング順序
+## リソースのプロビジョニング
 
-Service Catalog製品は以下の順序でプロビジョニングする必要があります。
+### 推奨: Complete Network Stackを使用
+
+**通常は、Complete Network Stack製品を使用してください。**
+
+Service Catalogコンソールから「Complete Network Stack」製品を選択し、以下のパラメータを入力するだけで、ネットワークインフラ全体が一度にデプロイされます。
+
+#### パラメータ例
+
+```yaml
+SystemName: myapp
+Env: dev
+VPCCidr: 10.0.0.0/16
+PublicSubnetACidr: 10.0.1.0/24
+PublicSubnetCCidr: 10.0.2.0/24
+PrivateSubnetA1Cidr: 10.0.11.0/24
+PrivateSubnetA2Cidr: 10.0.12.0/24
+PrivateSubnetA3Cidr: 10.0.13.0/24
+PrivateSubnetC1Cidr: 10.0.21.0/24
+PrivateSubnetC2Cidr: 10.0.22.0/24
+PrivateSubnetC3Cidr: 10.0.23.0/24
+CreateNATGateway: true
+```
+
+### 個別リソース製品を使用する場合
+
+個別にカスタマイズが必要な場合のみ、以下の順序でプロビジョニングしてください。
+
+#### プロビジョニング順序
 
 1. **VPC** (最初)
 2. **Security Groups** (VPCの後)
@@ -91,31 +129,36 @@ Service Catalog製品は以下の順序でプロビジョニングする必要�
 4. **Route Tables** (Subnetsの後)
 5. **VPC Endpoints** (Security Groups、Subnets、Route Tablesの後)
 
-### 各製品のパラメータ例
+#### 各製品のパラメータ例
 
-#### 1. VPC
+##### 1. VPC
+
 - `SystemName`: myapp
 - `Env`: dev
 - `VPCCidr`: 10.0.0.0/16
 
-#### 2. Security Groups
+##### 2. Security Groups
+
 - `SystemName`: myapp
 - `Env`: dev
 - `VPCStackName`: (VPCスタック名を指定)
 
-#### 3. Subnets
+##### 3. Subnets
+
 - `SystemName`: myapp
 - `Env`: dev
 - `VPCStackName`: (VPCスタック名を指定)
 
-#### 4. Route Tables
+##### 4. Route Tables
+
 - `SystemName`: myapp
 - `Env`: dev
 - `VPCStackName`: (VPCスタック名を指定)
 - `SubnetStackName`: (Subnetsスタック名を指定)
 - `CreateNATGateway`: true
 
-#### 5. VPC Endpoints
+##### 5. VPC Endpoints
+
 - `SystemName`: myapp
 - `Env`: dev
 - `VPCStackName`: (VPCスタック名を指定)
@@ -127,7 +170,7 @@ Service Catalog製品は以下の順序でプロビジョニングする必要�
 
 全てのリソースは以下の命名規則に従います。
 
-```
+```text
 {SystemName}-{Env}-{リソース名}
 ```
 
